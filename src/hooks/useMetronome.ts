@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { getAudioContext, playBufferAt, unlockAudioContext } from '../lib/audio';
 
 interface UseMetronomeArgs {
   readonly bpm: number;
   readonly tickBuffer: AudioBuffer | null;
+  readonly pendulumRef: RefObject<SVGGElement | null>;
 }
 
 interface UseMetronomeResult {
   readonly isPlaying: boolean;
-  readonly angle: number;
   readonly start: () => Promise<void>;
   readonly stop: () => void;
   readonly toggle: () => Promise<void>;
@@ -17,10 +17,21 @@ interface UseMetronomeResult {
 const MAX_ANGLE_DEG = 30;
 const SCHEDULE_AHEAD_SEC = 0.1;
 const SCHEDULER_INTERVAL_MS = 25;
+const FRAME_LEAD_SEC = 1 / 60;
+const PLAY_START_DELAY_SEC = 0.1;
 
-export function useMetronome({ bpm, tickBuffer }: UseMetronomeArgs): UseMetronomeResult {
+function applyAngle(el: SVGGElement | null, angle: number): void {
+  if (el) el.style.transform = `rotate(${angle}deg)`;
+}
+
+function visualLeadFor(ctx: AudioContext): number {
+  const base = ctx.baseLatency ?? 0;
+  const output = ctx.outputLatency ?? 0;
+  return FRAME_LEAD_SEC - base - output;
+}
+
+export function useMetronome({ bpm, tickBuffer, pendulumRef }: UseMetronomeArgs): UseMetronomeResult {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [angle, setAngle] = useState(MAX_ANGLE_DEG);
 
   const bpmRef = useRef(bpm);
   const startTimeRef = useRef(0);
@@ -28,6 +39,10 @@ export function useMetronome({ bpm, tickBuffer }: UseMetronomeArgs): UseMetronom
   const tickBufferRef = useRef<AudioBuffer | null>(tickBuffer);
   const rafIdRef = useRef<number | null>(null);
   const schedulerIdRef = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    applyAngle(pendulumRef.current, MAX_ANGLE_DEG);
+  }, [pendulumRef]);
 
   useEffect(() => {
     tickBufferRef.current = tickBuffer;
@@ -40,7 +55,7 @@ export function useMetronome({ bpm, tickBuffer }: UseMetronomeArgs): UseMetronom
       const oldPeriod = 60 / oldBpm;
       const newPeriod = 60 / bpm;
       const elapsed = ctx.currentTime - startTimeRef.current;
-      const phase = (elapsed / oldPeriod);
+      const phase = elapsed / oldPeriod;
       startTimeRef.current = ctx.currentTime - phase * newPeriod;
       nextBeatIndexRef.current = Math.ceil(phase);
     }
@@ -65,17 +80,18 @@ export function useMetronome({ bpm, tickBuffer }: UseMetronomeArgs): UseMetronom
   const animate = useCallback(() => {
     const ctx = getAudioContext();
     const period = 60 / bpmRef.current;
-    const elapsed = ctx.currentTime - startTimeRef.current;
-    const next = MAX_ANGLE_DEG * Math.cos((Math.PI * elapsed) / period);
-    setAngle(next);
+    const lead = visualLeadFor(ctx);
+    const elapsed = (ctx.currentTime + lead) - startTimeRef.current;
+    const angle = MAX_ANGLE_DEG * Math.cos((Math.PI * elapsed) / period);
+    applyAngle(pendulumRef.current, angle);
     rafIdRef.current = requestAnimationFrame(animate);
-  }, []);
+  }, [pendulumRef]);
 
   const start = useCallback(async () => {
     if (isPlaying) return;
     await unlockAudioContext();
     const ctx = getAudioContext();
-    startTimeRef.current = ctx.currentTime + 0.05;
+    startTimeRef.current = ctx.currentTime + PLAY_START_DELAY_SEC;
     nextBeatIndexRef.current = 0;
     setIsPlaying(true);
     scheduler();
@@ -94,8 +110,8 @@ export function useMetronome({ bpm, tickBuffer }: UseMetronomeArgs): UseMetronom
       cancelAnimationFrame(rafIdRef.current);
       rafIdRef.current = null;
     }
-    setAngle(MAX_ANGLE_DEG);
-  }, [isPlaying]);
+    applyAngle(pendulumRef.current, MAX_ANGLE_DEG);
+  }, [isPlaying, pendulumRef]);
 
   const toggle = useCallback(async () => {
     if (isPlaying) stop();
@@ -109,5 +125,5 @@ export function useMetronome({ bpm, tickBuffer }: UseMetronomeArgs): UseMetronom
     };
   }, []);
 
-  return { isPlaying, angle, start, stop, toggle };
+  return { isPlaying, start, stop, toggle };
 }

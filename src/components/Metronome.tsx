@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { BPM_DEFAULT, clampBpm } from '../lib/tempo';
 import { useAudioBuffers } from '../hooks/useAudioBuffers';
 import { useMetronome } from '../hooks/useMetronome';
@@ -13,9 +13,11 @@ export function Metronome() {
   const [bpm, setBpm] = useState(BPM_DEFAULT);
   const buffers = useAudioBuffers();
   const { theme, toggleTheme } = useTheme();
-  const { isPlaying, angle, toggle } = useMetronome({
+  const pendulumRef = useRef<SVGGElement>(null);
+  const { isPlaying, toggle } = useMetronome({
     bpm,
     tickBuffer: buffers?.tick ?? null,
+    pendulumRef,
   });
 
   return (
@@ -26,7 +28,7 @@ export function Metronome() {
       </header>
 
       <div className="pendulum-wrapper">
-        <Pendulum angle={angle} />
+        <Pendulum ref={pendulumRef} />
       </div>
 
       <BpmDisplay bpm={bpm} />

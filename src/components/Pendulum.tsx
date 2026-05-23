@@ -1,11 +1,14 @@
-interface PendulumProps {
-  readonly angle: number;
-}
+import { forwardRef } from 'react';
 
-export function Pendulum({ angle }: PendulumProps) {
+const ARM_GROUP_STYLE = {
+  transformOrigin: '120px 260px',
+  willChange: 'transform',
+} as const;
+
+export const Pendulum = forwardRef<SVGGElement>(function Pendulum(_props, ref) {
   return (
     <svg
-      viewBox="0 0 240 320"
+      viewBox="-15 0 270 320"
       className="pendulum"
       role="img"
       aria-label="Metronome pendulum"
@@ -42,19 +45,19 @@ export function Pendulum({ angle }: PendulumProps) {
 
       <line x1="80" y1="170" x2="160" y2="170" stroke="var(--tick-mark)" strokeWidth="1" strokeDasharray="3 3" />
 
-      <g style={{ transform: `rotate(${angle}deg)`, transformOrigin: '120px 260px', transition: 'none' }}>
+      <g ref={ref} style={ARM_GROUP_STYLE}>
         <line
           x1="120"
           y1="260"
           x2="120"
-          y2="70"
+          y2="13"
           stroke="var(--arm)"
           strokeWidth="4"
           strokeLinecap="round"
         />
         <circle
           cx="120"
-          cy="120"
+          cy="78"
           r="14"
           fill="url(#weightGrad)"
           stroke="var(--weight-stroke)"
@@ -67,4 +70,4 @@ export function Pendulum({ angle }: PendulumProps) {
       <rect x="20" y="295" width="200" height="14" rx="3" fill="var(--base)" stroke="var(--body-stroke)" strokeWidth="1.5" />
     </svg>
   );
-}
+});
