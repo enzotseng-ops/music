@@ -5,7 +5,14 @@ const ARM_GROUP_STYLE = {
   willChange: 'transform',
 } as const;
 
-export const Pendulum = forwardRef<SVGGElement>(function Pendulum(_props, ref) {
+interface PendulumProps {
+  readonly easterEgg?: boolean;
+}
+
+export const Pendulum = forwardRef<SVGGElement, PendulumProps>(function Pendulum(
+  { easterEgg = false },
+  ref,
+) {
   return (
     <svg
       viewBox="-15 0 270 320"
@@ -55,14 +62,25 @@ export const Pendulum = forwardRef<SVGGElement>(function Pendulum(_props, ref) {
           strokeWidth="4"
           strokeLinecap="round"
         />
-        <circle
-          cx="120"
-          cy="78"
-          r="14"
-          fill="url(#weightGrad)"
-          stroke="var(--weight-stroke)"
-          strokeWidth="1.5"
-        />
+        {easterEgg ? (
+          <image
+            href={`${import.meta.env.BASE_URL}weight-egg.png`}
+            x="92"
+            y="40"
+            width="56"
+            height="76"
+            preserveAspectRatio="xMidYMid meet"
+          />
+        ) : (
+          <circle
+            cx="120"
+            cy="78"
+            r="14"
+            fill="url(#weightGrad)"
+            stroke="var(--weight-stroke)"
+            strokeWidth="1.5"
+          />
+        )}
       </g>
 
       <circle cx="120" cy="260" r="7" fill="var(--pivot)" stroke="var(--body-stroke)" strokeWidth="1.5" />

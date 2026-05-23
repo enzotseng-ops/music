@@ -9,8 +9,11 @@ import { BpmControls } from './BpmControls';
 import { PlayButton } from './PlayButton';
 import { ThemeToggle } from './ThemeToggle';
 
+const EASTER_EGG_CHANCE = 0.1;
+
 export function Metronome() {
   const [bpm, setBpm] = useState(BPM_DEFAULT);
+  const [easterEgg] = useState(() => Math.random() < EASTER_EGG_CHANCE);
   const buffers = useAudioBuffers();
   const { theme, toggleTheme } = useTheme();
   const pendulumRef = useRef<SVGGElement>(null);
@@ -28,7 +31,7 @@ export function Metronome() {
       </header>
 
       <div className="pendulum-wrapper">
-        <Pendulum ref={pendulumRef} />
+        <Pendulum ref={pendulumRef} easterEgg={easterEgg} />
       </div>
 
       <BpmDisplay bpm={bpm} />
